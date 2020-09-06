@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Video Slider Plugin
  * Plugin URI:        #
- * Description:       Use this Code to insert this code to show the slider [video_slider] 😉
+ * Description:       Use this Code to insert this code to show the slider [video_slider category="Slider One"] 😉
  * Version:           1.0.0
  * Requires at least: 5.2
  * Requires PHP:      7.2
@@ -71,7 +71,33 @@ function create_video_cpt() {
 	register_post_type( 'video_slider', $args );
 
 }
+
+function taxonomy_for_video_cpt() {
+    $labels = array(
+        'name' => _x( 'Slider Name', 'taxonomy general name' ),
+        'singular_name' => _x( 'Slider Name', 'taxonomy singular name' ),
+        'search_items' =>  __( 'Search' ),
+        'all_items' => __( 'All Slider' ),
+        'parent_item' => __( 'Parent Slider Name' ),
+        'parent_item_colon' => __( 'Parent Slider Name:' ),
+        'edit_item' => __( 'Edit Slider Name' ),
+        'update_item' => __( 'Update Slider Name' ),
+        'add_new_item' => __( 'Add New Slider Name' ),
+        'new_item_name' => __( 'New Slider Name' ),
+        'menu_name' => __( 'Slider Name' ),
+    );
+
+    register_taxonomy('sliders_name',array('video_slider'), array(
+        'hierarchical' => true,
+        'labels' => $labels,
+        'show_ui' => true,
+        'show_admin_column' => true,
+        'query_var' => true,
+        'rewrite' => array( 'slug' => 'slider_name' ),
+    ));
+}
 add_action( 'init', 'create_video_cpt', 0 );
+add_action( 'init', 'taxonomy_for_video_cpt', 0 );
 
 /**
  * Enqueue script and style for the Video slider
@@ -123,12 +149,24 @@ add_action('wp_footer', 'main_javascript_vs');
  * Show the Slider
  */
 
-function show_slider_vs(){
+function show_slider_vs( $atts ){
     ob_start();
+
+    $atts = shortcode_atts( array(
+        'category' => ''
+    ), $atts );
+
     //Custom Query
     $query = new WP_Query(
         [
-            'post_type' => 'video_slider'
+            'post_type' => 'video_slider',
+            'tax_query' => [
+                [
+                    'taxonomy' => 'sliders_name',
+                    'field'    => 'slug',
+                    'terms'    =>  $atts
+                ]
+            ]
         ]
     );
 
@@ -137,9 +175,18 @@ function show_slider_vs(){
         <div class="rf-wrapper">
             <div class="carousel">
                 <?php while ($query->have_posts()): $query->the_post(); 
-                $video_url = get_field( "video_url_vs" ); ?>
+
+                $video_url_yt = get_field( "video_url_vs" ); 
+                $video_url_vv = get_field( "video_url_vs_vimeo" ); 
+                
+                ?>
                     <div>
-                        <iframe   src="<?php echo $video_url; ?>" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        <?php if( !empty($video_url_yt) ){ ?> 
+                            <iframe   src="<?php echo $video_url_yt; ?>" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        <?php } ?>
+                        <?php if( !empty($video_url_vv) ){ ?> 
+                            <iframe   src="<?php echo $video_url_vv; ?>" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+                        <?php } ?>
                     </div>
                 <?php endwhile; ?>
             </div>
@@ -157,17 +204,58 @@ add_shortcode('video_slider', 'show_slider_vs');
  * ACF Installetaion Check 😉
  */
 if( function_exists('acf_add_local_field_group') ):
+
+    acf_add_local_field_group(array(
+        'key' => 'group_5f5525649ebe9',
+        'title' => 'Video URL Vimeo',
+        'fields' => array(
+            array(
+                'key' => 'field_5f552564acf90',
+                'label' => 'Vimeo Video URL',
+                'name' => 'video_url_vs_vimeo',
+                'type' => 'url',
+                'instructions' => '',
+                'required' => 0,
+                'conditional_logic' => 0,
+                'wrapper' => array(
+                    'width' => '',
+                    'class' => '',
+                    'id' => '',
+                ),
+                'default_value' => '',
+                'placeholder' => 'Ex: https://player.vimeo.com/video/108018156?title=0&byline=0',
+            ),
+        ),
+        'location' => array(
+            array(
+                array(
+                    'param' => 'post_type',
+                    'operator' => '==',
+                    'value' => 'video_slider',
+                ),
+            ),
+        ),
+        'menu_order' => 0,
+        'position' => 'normal',
+        'style' => 'default',
+        'label_placement' => 'top',
+        'instruction_placement' => 'label',
+        'hide_on_screen' => '',
+        'active' => true,
+        'description' => '',
+    ));
+    
     acf_add_local_field_group(array(
         'key' => 'group_5f51284f52e3c',
-        'title' => 'Video URL',
+        'title' => 'YT Video URL',
         'fields' => array(
             array(
                 'key' => 'field_5f51286b44bb6',
-                'label' => 'Video URL',
+                'label' => 'YouTube Video URL',
                 'name' => 'video_url_vs',
                 'type' => 'url',
                 'instructions' => '',
-                'required' => 1,
+                'required' => 0,
                 'conditional_logic' => 0,
                 'wrapper' => array(
                     'width' => '',
@@ -196,4 +284,5 @@ if( function_exists('acf_add_local_field_group') ):
         'active' => true,
         'description' => '',
     ));
-endif;
+    
+    endif;
